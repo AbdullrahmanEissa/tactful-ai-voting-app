@@ -1,0 +1,55 @@
+version: '3.8'
+services:
+  redis:
+    image: redis:alpine
+
+  db:
+    image: postgres:13-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+  vote:
+    build: ./vote
+    environment:
+      REDIS: redis
+    depends_on:
+      - redis
+
+  result:
+    build: ./result
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    depends_on:
+      - db
+
+  worker:
+    build: ./worker
+    environment:
+      REDIS: redis
+      POSTGRES_HOST: db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    depends_on:
+      - redis
+      - db
+
+  nginx:
+    image: nginx:alpine
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+    depends_on:
+      - vote
+      - result
+
+volumes:
+  db-data:
